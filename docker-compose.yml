@@ -1,0 +1,30 @@
+services:
+  fastapi_app:
+    build: .
+    container_name: bmt400-fastapi
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://postgres.jxjwcckjjmpuecwtrgyv:doTqgQ46MFIVF0@aws-1-us-east-2.pooler.supabase.com:6543/postgres
+    depends_on:
+      - mosquitto_broker
+    ports:
+      - "8000:8000"
+    networks:
+      - iot-net
+    dns: 
+      - 8.8.8.8 
+
+  mosquitto_broker:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto_broker
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    ports:
+      - "1883:1883"
+    networks:
+      - iot-net
+
+networks:
+  iot-net:
+    driver: bridge
