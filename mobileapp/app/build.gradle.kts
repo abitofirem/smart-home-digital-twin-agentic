@@ -56,4 +56,8 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    // Ikonlar (Lightbulb, vb.) için
+    implementation(libs.androidx.material.icons.extended)
+    // ViewModel'ı Compose'da kullanabilmek için (viewModel() fonksiyonu)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 }
