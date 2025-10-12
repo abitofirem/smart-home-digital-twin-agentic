@@ -3,28 +3,15 @@ services:
     build: .
     container_name: bmt400-fastapi
     restart: unless-stopped
+    # .env dosyasındaki değişkenleri konteynere aktar
     environment:
-      - DATABASE_URL=postgresql+psycopg2://postgres.jxjwcckjjmpuecwtrgyv:doTqgQ46MFIVF0@aws-1-us-east-2.pooler.supabase.com:6543/postgres
-    depends_on:
-      - mosquitto_broker
+      - DATABASE_URL=${SUPABASE_DB_URL}
+      - MQTT_BROKER_HOST=${HIVEMQ_HOST}
+      - MQTT_BROKER_PORT=${HIVEMQ_PORT}
+      - MQTT_USERNAME=${HIVEMQ_USERNAME}
+      - MQTT_PASSWORD=${HIVEMQ_PASSWORD}
     ports:
       - "8000:8000"
-    networks:
-      - iot-net
-    dns: 
-      - 8.8.8.8 
-
-  mosquitto_broker:
-    image: eclipse-mosquitto:2
-    container_name: mosquitto_broker
-    restart: unless-stopped
-    volumes:
-      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
-    ports:
-      - "1883:1883"
-    networks:
-      - iot-net
-
-networks:
-  iot-net:
-    driver: bridge
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
