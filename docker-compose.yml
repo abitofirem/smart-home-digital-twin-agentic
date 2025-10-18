@@ -1,15 +1,19 @@
 services:
   fastapi_app:
     build: .
-    container_name: bmt400-fastapi
+    container_name: smart_home_api
     restart: unless-stopped
     # .env dosyasındaki değişkenleri konteynere aktar
-    environment:
-      - DATABASE_URL=${SUPABASE_DB_URL}
-      - MQTT_BROKER_HOST=${HIVEMQ_HOST}
-      - MQTT_BROKER_PORT=${HIVEMQ_PORT}
-      - MQTT_USERNAME=${HIVEMQ_USERNAME}
-      - MQTT_PASSWORD=${HIVEMQ_PASSWORD}
+    env_file:
+      - .env
+
+    volumes:
+      # Firebase JSON Dosyasını Konteynere Aktar
+      # YOL: [Kök klasördeki dosya adı]:/app/[Kök klasördeki dosya adı]
+      - ./bmt400-b7c8d-firebase-adminsdk-fbsvc-67bfcc72f2.json:/app/bmt400-b7c8d-firebase-adminsdk-fbsvc-67bfcc72f2.json
+      
+      # Canlı geliştirme için kod klasörünü bağla (opsiyonel)
+      - ./app:/app
     ports:
       - "8000:8000"
     dns:
