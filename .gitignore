@@ -25,6 +25,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+bmt400-b7c8d-firebase-adminsdk-fbsvc-67bfcc72f2.json
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

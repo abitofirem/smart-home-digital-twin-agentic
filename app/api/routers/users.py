@@ -1,14 +1,12 @@
 # Konum: app/api/routers/users.py
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Dict, Any
+from datetime import datetime
 
-# Güvenlik için şifre hashing kütüphanesini import etmelisin
-# Örneğin: from passlib.context import CryptContext
-# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-from app.db import models, schemas
+from firebase_admin import firestore 
+from firebase_admin.firestore import client as FirestoreClient
+from app.db import schemas
 from app.db.database import get_db
 
 router = APIRouter(
@@ -16,54 +14,52 @@ router = APIRouter(
     tags=["Users"],
 )
 
-# -----------------------------------------------------
-# 1. Yeni Kullanıcı Oluşturma (Kayıt)
-# -----------------------------------------------------
+def doc_to_user(doc: Any) -> Dict[str, Any]:
+    """Firestore dokümanını User şemasına dönüştürür."""
+    data = doc.to_dict()
+    timestamp = data.get("created_at")
+    
+    return {
+        "id": doc.id, 
+        "username": data.get("username"),
+        "email": data.get("email"),
+        "is_active": data.get("is_active", True),
+        "created_at": timestamp.isoformat() if timestamp else datetime.now().isoformat()
+    }
 
 @router.post("/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Kullanıcı adının veya e-postanın zaten var olup olmadığını kontrol et
-    db_user = db.query(models.User).filter(
-        (models.User.username == user.username) | (models.User.email == user.email)
-    ).first()
+def create_user(user: schemas.UserCreate, db: FirestoreClient = Depends(get_db)):
     
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username or email already registered")
+    # Firebase'de eşsizlik kontrolü (username/email)
+    existing_user_ref = db.collection("users").where("username", "==", user.username).limit(1).stream()
+    if list(existing_user_ref):
+        raise HTTPException(status_code=400, detail="Username already registered")
+        
+    existing_email_ref = db.collection("users").where("email", "==", user.email).limit(1).stream()
+    if list(existing_email_ref):
+        raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Şifreyi hash'le
-    # hashed_password = pwd_context.hash(user.password) 
+    new_user_data = {
+        "username": user.username, 
+        "email": user.email, 
+        "hashed_password": user.password, # DİKKAT: Üretimde mutlaka HASH'lenmeli!
+        "created_at": firestore.SERVER_TIMESTAMP,
+        "is_active": True
+    }
     
-    # Şimdilik hash'lemeden (PoC amaçlı)
-    db_user = models.User(
-        username=user.username, 
-        email=user.email, 
-        hashed_password=user.password # DİKKAT: Gerçek uygulamada HASH'LENMELİDİR!
-    )
-    
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-
-# -----------------------------------------------------
-# 2. Kullanıcıları Listeleme (Yönetim Amaçlı)
-# -----------------------------------------------------
+    doc_ref = db.collection("users").add(new_user_data)[1] 
+    doc = doc_ref.get()
+    return doc_to_user(doc)
 
 @router.get("/", response_model=List[schemas.User])
-def get_users(db: Session = Depends(get_db)):
-    """
-    Sistemdeki tüm kullanıcıları listeler. (Üretim ortamında kısıtlanmalıdır)
-    """
-    users = db.query(models.User).all()
+def get_users(db: FirestoreClient = Depends(get_db)):
+    users_ref = db.collection("users").stream()
+    users = [doc_to_user(doc) for doc in users_ref]
     return users
 
-# -----------------------------------------------------
-# 3. Belirli Bir Kullanıcıyı Çekme
-# -----------------------------------------------------
-
 @router.get("/{user_id}", response_model=schemas.User)
-def get_user(user_id: int, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not db_user:
+def get_user(user_id: str, db: FirestoreClient = Depends(get_db)):
+    user_ref = db.collection("users").document(user_id).get()
+    if not user_ref.exists:
         raise HTTPException(status_code=404, detail="User not found")
-    return db_user
+    return doc_to_user(user_ref)

@@ -1,6 +1,6 @@
 fastapi 
 uvicorn 
-sqlalchemy 
 psycopg2-binary 
 python-dotenv 
 paho-mqtt
+firebase-admin

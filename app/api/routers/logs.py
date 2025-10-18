@@ -1,11 +1,12 @@
 # Konum: app/api/routers/logs.py
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
-from datetime import datetime, timezone
-from typing import Optional, List
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 
-from app.db import models, schemas
+from firebase_admin import firestore 
+from firebase_admin.firestore import client as FirestoreClient
+from app.db import schemas
 from app.db.database import get_db
 
 router = APIRouter(
@@ -13,44 +14,40 @@ router = APIRouter(
     tags=["Logs"],
 )
 
-# Pydantic Şemasına Log için ihtiyacımız var, schemas.py'ye ekleyelim.
-# Geçici olarak burada tanımlayabiliriz, ancak schemas.py'ye taşımak daha doğru olacaktır.
+def doc_to_log(doc: Any) -> Dict[str, Any]:
+    """Firestore dokümanını Log şemasına dönüştürür."""
+    data = doc.to_dict()
+    timestamp = data.get("timestamp")
+    
+    return {
+        "id": doc.id,
+        "device_id": data.get("device_id"),
+        "sensor_type": data.get("sensor_type"),
+        "value": data.get("value"),
+        "raw_value": data.get("raw_value"),
+        "timestamp": timestamp.isoformat() if timestamp else datetime.now().isoformat()
+    }
 
-# --- Log Şemaları (schemas.py'ye eklenecek varsayımıyla) ---
-class LogBase(schemas.BaseModel):
-    message: str
-    level: str
-    timestamp: datetime
-    device_id: Optional[int]
+# Not: Bu router'ın, DeviceLog ve SensorLog verilerini çekmek için farklı endpoint'lere ayrılması daha temiz olur.
+# Şimdilik SensorLog verisini çeken ana endpoint'i tanımlayalım.
 
-class Log(LogBase):
-    id: int
-    class Config:
-        from_attributes = True
-# ---
-
-@router.get("/", response_model=List[Log])
-def get_logs(
-    db: Session = Depends(get_db),
-    # AI Analizi için filtreleme parametreleri
-    start_time: Optional[datetime] = Query(None, description="Başlangıç zamanı (ISO formatı)"),
-    end_time: Optional[datetime] = Query(None, description="Bitiş zamanı (ISO formatı)"),
-    device_id: Optional[int] = Query(None, description="Filtrelenecek cihaz ID'si"),
+@router.get("/sensors", response_model=List[schemas.SensorLog])
+def get_sensor_logs(
+    db: FirestoreClient = Depends(get_db),
+    device_id: Optional[str] = Query(None, description="Filtrelenecek cihaz ID'si"),
     limit: int = Query(100, ge=1, le=1000, description="Döndürülecek maksimum kayıt sayısı")
 ):
-    query = db.query(models.Log)
+    """
+    Yapay Zeka modellerinin veri çekmesi için sensör kayıtlarını listeler.
+    """
+    query = db.collection("sensors_log")
 
     if device_id is not None:
-        query = query.filter(models.Log.device_id == device_id)
-    
-    if start_time:
-        # Zaman dilimi farkını yönetmek için timezone-aware sorgu
-        query = query.filter(models.Log.timestamp >= start_time.replace(tzinfo=timezone.utc))
-    
-    if end_time:
-        query = query.filter(models.Log.timestamp <= end_time.replace(tzinfo=timezone.utc))
+        query = query.where("device_id", "==", device_id)
 
-    # En yeni loglar en başta olacak şekilde sırala ve limiti uygula
-    logs = query.order_by(models.Log.timestamp.desc()).limit(limit).all()
+    # Firebase'de orderBy() ve limit() kullanılır
+    logs_ref = query.order_by("timestamp", direction=firestore.Query.DESCENDING).limit(limit).stream()
+    
+    logs = [doc_to_log(doc) for doc in logs_ref]
     
     return logs
