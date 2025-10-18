@@ -8,20 +8,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.example.iothome.ui.screens.home.HomeScreen
+import com.example.iothome.ui.MainScreen // <-- YENİ IMPORT
 import com.example.iothome.ui.theme.MobileappTheme
+
+// import com.example.iothome.ui.screens.home.HomeScreen // <-- HomeScreen artık burada çağrılmaz
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            MobileappTheme { // Tema adı
+            MobileappTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation() // Ana gezintiyi çağır
+                    AppNavigation() // Şimdi bu, MainScreen'i çağıracak.
                 }
             }
         }
@@ -30,7 +32,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation() {
-    // Sadece Home ekranımızı yüklüyoruz
-    HomeScreen()
+    // Düzeltme: Tüm navigasyon mantığını ve Bottom Bar'ı içeren MainScreen'i çağır.
+    MainScreen()
 }
 
+// ... Diğer Composable'lar ve Preview'lar ...

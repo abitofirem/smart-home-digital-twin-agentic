@@ -1,14 +1,21 @@
 [versions]
-agp = "8.8.0"
+agp = "8.12.3"
 kotlin = "2.0.0"
 coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
+kotlinxCoroutinesAndroid = "1.8.1"
+kotlinxCoroutinesCore = "1.8.1"
 lifecycleRuntimeKtx = "2.9.2"
 activityCompose = "1.10.1"
 composeBom = "2024.04.01"
 lifecycleViewmodelCompose = "2.9.4"
+orgEclipsePahoAndroidService = "1.1.1"
+orgEclipsePahoClientMqttv3 = "1.2.5"
+uiGraphics = "1.9.3"
+navigationCompose = "2.9.5"
+sceneformBase = "1.17.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -27,6 +34,13 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
+org-eclipse-paho-android-service = { module = "org.eclipse.paho:org.eclipse.paho.android.service", version.ref = "orgEclipsePahoAndroidService" }
+org-eclipse-paho-client-mqttv3 = { module = "org.eclipse.paho:org.eclipse.paho.client.mqttv3", version.ref = "orgEclipsePahoClientMqttv3" }
+ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+sceneform-base = { group = "com.google.ar.sceneform", name = "sceneform-base", version.ref = "sceneformBase" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

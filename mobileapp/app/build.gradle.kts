@@ -1,3 +1,4 @@
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -16,7 +17,19 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+
+
     }
+// GİZLİ BİLGİLERİ BURAYA TAŞIYORUZ - YENİ YAKLAŞIM
+    // local.properties dosyasındaki değerleri String olarak alıyoruz.
+    // 'getProperty()' yerine 'findProperty()' kullanmak, değer yoksa hata vermez.
+    val mqttUsername = project.findProperty("MQTT_USERNAME") as String? ?: "DEFAULT_USERNAME"
+    val mqttPassword = project.findProperty("MQTT_PASSWORD") as String? ?: "DEFAULT_PASSWORD"
+
+
+
+
 
     buildTypes {
         release {
@@ -26,6 +39,12 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            // BuildConfig'e değerleri atıyoruz.
+            buildConfigField("String", "MQTT_USERNAME", "\"$mqttUsername\"")
+            buildConfigField("String", "MQTT_PASSWORD", "\"$mqttPassword\"")
+        }
+
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -36,6 +55,8 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+
     }
 }
 
@@ -49,6 +70,9 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.ui.graphics)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.sceneform.base)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -60,4 +84,13 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     // ViewModel'ı Compose'da kullanabilmek için (viewModel() fonksiyonu)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // Eclipse Paho MQTT Client (Endüstri standardı MQTT kütüphanesi)
+    implementation(libs.org.eclipse.paho.client.mqttv3)
+
+    // Paho'nun Android servisini kullanmak için
+    implementation(libs.org.eclipse.paho.android.service)
+
+    // Coroutine desteği için (Asenkron veri akışı için kritik)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
 }

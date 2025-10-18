@@ -13,17 +13,30 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel // ViewModel'ı almak için
+import androidx.navigation.NavHostController
+import com.example.iothome.ui.theme.BackgroundDark // Koyu tema arka planı
+import com.example.iothome.ui.theme.OnSurfaceDark // Koyu tema metin rengi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    bottomNavController: NavHostController,
     // ViewModel'ı Compose yapısı içinde alıyoruz
     viewModel: HomeViewModel = viewModel()
 ) {
     // ViewModel'dan gelen durumu izle
+    // Not: Bu, sadece light modelini yayınlayan eski ViewModel yapınızla uyumludur.
     val light by viewModel.lightState.collectAsState()
 
-    Scaffold(topBar = { TopAppBar(title = { Text(light.name + " Kontrol") }) }) { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(light.name + " Kontrol") },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark, titleContentColor = OnSurfaceDark)
+            )
+        },
+        containerColor = BackgroundDark // Koyu tema arka planı
+    ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -57,7 +70,7 @@ fun HomeScreen(
                     // Kullanıcı Switch'i değiştirdiğinde ViewModel'a bildir
                     viewModel.toggleLight()
                 },
-                modifier = Modifier.scale(1.5f) // Butonu biraz büyütmek için
+                modifier = Modifier.scale(1.5f)
             )
         }
     }
