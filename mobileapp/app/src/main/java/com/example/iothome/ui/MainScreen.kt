@@ -2,71 +2,96 @@ package com.example.iothome.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add // (+) İkonu için
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Notifications // Bildirim ikonu için
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.* // remember, derivedStateOf
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState // NavController'ı dinlemek için
 import androidx.navigation.compose.rememberNavController
 import com.example.iothome.ui.navigation.AppBottomNavHost
-import com.example.iothome.ui.theme.BackgroundDark // Koyu tema arka planı
+import com.example.iothome.ui.navigation.BottomNavItem // Rota isimleri için
+import com.example.iothome.ui.theme.BackgroundDark
 import kotlinx.coroutines.launch
 
-// Ana ekran, Bottom Nav Bar'ı ve Yan Menüyü barındıran Scaffolding'dir.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
-    // Navigasyon ve Drawer yönetimi için gerekli state ve scope'lar
+
     val bottomNavController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // Yan Menü (Drawer) Kontainer'ı
+    // --- YENİ: NavController'ı dinleyerek mevcut rotayı alıyoruz ---
+    val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    // Mevcut rotaya göre TopAppBar başlığını belirliyoruz
+    val currentScreenTitle by remember(currentRoute) {
+        derivedStateOf {
+            when (currentRoute) {
+                BottomNavItem.Home.route -> "Merhaba KullaniciAdi!" // Home ekranı başlığı
+                BottomNavItem.Rooms.route -> "Tüm Odalar" // Rooms ekranı başlığı
+                BottomNavItem.Routines.route -> "Agent AI & Rutinler"
+                BottomNavItem.Settings.route -> "Ayarlar"
+                // Diğer ekranlar (NewRoom, Catalog) için de başlık eklenebilir
+              "new_room_route" -> "Yeni Oda Ekle"
+                else -> "" // Varsayılan boş başlık
+            }
+        }
+    }
+    // -------------------------------------------------------------------
+
     ModalNavigationDrawer(
         drawerState = drawerState,
-        // AppDrawer içeriği
         drawerContent = {
             AppDrawer(
                 navController = bottomNavController,
-                closeDrawer = {
-                    // Drawer içeriği tıklandığında menüyü kapatma fonksiyonu
-                    scope.launch { drawerState.close() }
-                }
+                closeDrawer = { scope.launch { drawerState.close() } }
             )
         },
-        // Ana içerik
         content = {
-            // Scaffold (Top Bar ve Bottom Bar'ı içeren ana iskelet)
             Scaffold(
-                // Top Bar: Yan Menüyü açma ikonu buraya yerleştirilir
-                topBar ={
+                topBar = {
                     TopAppBar(
-                        title = {  }, // Genel proje adı
+                        // DÜZELTME: Başlık artık dinamik
+                        title = { Text(currentScreenTitle) },
                         navigationIcon = {
-                            IconButton(onClick = {
-                                // Menü ikonuna basıldığında menüyü aç
-                                scope.launch { drawerState.open() }
-                            }) {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(Icons.Filled.Menu, contentDescription = "Menü")
                             }
+                        },
+                        // DÜZELTME: Aksiyonlar da dinamik olabilir
+                        actions = {
+                            // Sadece Rooms ekranında (+) butonunu göster
+                            if (currentRoute == BottomNavItem.Rooms.route) {
+                                IconButton(onClick = { bottomNavController.navigate("new_room_route") }) {
+                                    Icon(Icons.Filled.Add, contentDescription = "Oda Ekle")
+                                }
+                            } else if (currentRoute == BottomNavItem.Home.route) {
+                                // Home ekranında Bildirim ikonunu göster
+                                IconButton(onClick = { /* Bildirimler */ }) {
+                                    Icon(Icons.Filled.Notifications, contentDescription = "Bildirimler")
+                                }
+                            }
+                            // Diğer ekranlar için başka aksiyonlar eklenebilir
                         },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundDark)
                     )
                 },
-                // Bottom Bar: Animasyonlu navigasyon çubuğu
                 bottomBar = { AppBottomBar(bottomNavController) },
-                containerColor = BackgroundDark // Koyu tema arka planı
+                containerColor = BackgroundDark
             ) { innerPadding ->
-
-                // Bottom Nav Bar'ın içeriğini (sekme sayfalarını) yöneten NavHost
                 AppBottomNavHost(
                     navController = bottomNavController,
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier, // Padding burada uygulanmaz
+                    paddingValues = innerPadding // PaddingValues NavHost'a iletilir
                 )
             }
         }
     )
 }
-// AppBottomBar.kt dosyasında bulunan diğer Composable'lar (AppBottomBar, CustomBottomNavItem) buraya dahil edilmiştir.

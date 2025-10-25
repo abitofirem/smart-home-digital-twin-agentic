@@ -16,6 +16,7 @@ orgEclipsePahoClientMqttv3 = "1.2.5"
 uiGraphics = "1.9.3"
 navigationCompose = "2.9.5"
 sceneformBase = "1.17.1"
+foundationLayout = "1.9.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -41,6 +42,7 @@ org-eclipse-paho-client-mqttv3 = { module = "org.eclipse.paho:org.eclipse.paho.c
 ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 sceneform-base = { group = "com.google.ar.sceneform", name = "sceneform-base", version.ref = "sceneformBase" }
+androidx-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

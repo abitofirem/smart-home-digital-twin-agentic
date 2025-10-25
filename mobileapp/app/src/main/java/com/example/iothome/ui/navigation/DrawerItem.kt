@@ -30,3 +30,4 @@ val drawerItems = listOf(
     DrawerItem.AppSettings,
     DrawerItem.About
 )
+

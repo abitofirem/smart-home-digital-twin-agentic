@@ -1,68 +1,80 @@
 package com.example.iothome.ui.navigation
 
+import androidx.compose.foundation.layout.PaddingValues // PaddingValues importu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType // NavType importu KALDIRILABİLİR (RoomDetail ile gitti)
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument // navArgument importu KALDIRILABİLİR (RoomDetail ile gitti)
 import com.example.iothome.ui.screens.agent.AgentScreen
 import com.example.iothome.ui.screens.catalog.DeviceCatalogScreen
 import com.example.iothome.ui.screens.home.HomeScreen
+import com.example.iothome.ui.screens.rooms.NewRoomScreen
+// import com.example.iothome.ui.screens.rooms.RoomDetailScreen // <-- BU IMPORT KALDIRILDI
 import com.example.iothome.ui.screens.rooms.RoomsScreen
 import com.example.iothome.ui.screens.settings.SettingsScreen
 
 /**
- * Bottom Navigation Bar'da tıklanan sekmeyi ekranda gösteren NavHost bileşenidir.
+ * Ana NavHost: Bottom Navigation ve diğer tüm ekran rotalarını yönetir.
  */
 @Composable
-fun AppBottomNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
+fun AppBottomNavHost(
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
+    paddingValues: PaddingValues
+) {
     NavHost(
         navController = navController,
         startDestination = BottomNavItem.Home.route,
         modifier = modifier
-    )
-
-    {// --- 1. BOTTOM NAV BAR ROTLARI  ---
-        // 1. Ana Sayfa Sekmesi
+    ) {
+        // --- 1. BOTTOM NAV BAR ROTLARI ---
         composable(BottomNavItem.Home.route) {
-            HomeScreen(bottomNavController = navController)
+            HomeScreen(bottomNavController = navController, paddingValues = paddingValues)
         }
-
-        // 2. Odalar Sekmesi
         composable(BottomNavItem.Rooms.route) {
-            RoomsScreen(bottomNavController = navController)
+            RoomsScreen(bottomNavController = navController, paddingValues = paddingValues)
         }
-
-        // 3. Rutinler (Agent AI) Sekmesi
         composable(BottomNavItem.Routines.route) {
-            AgentScreen(bottomNavController = navController)
+      //      AgentScreen(bottomNavController = navController, paddingValues = paddingValues)
         }
-
-        // 4. Ayarlar Sekmesi
         composable(BottomNavItem.Settings.route) {
-            SettingsScreen(bottomNavController = navController)
+      //      SettingsScreen(bottomNavController = navController, paddingValues = paddingValues)
         }
 
+        // --- 2. DİĞER EKRAN ROTLARI ---
 
-        // --- 2. YAN MENÜ (DRAWER) ROTLARI ---
+        // Yeni Oda Ekleme Rotası
+        // KRİTİK DÜZELTME: Yeni Oda Ekleme Rotası artık aktif
+        composable("new_room_route") {
+            NewRoomScreen(navController = navController)
+        }
+
+       // }
+
+        // --- ODA DETAY ROTASI BURADAN KALDIRILDI ---
+        /*
+        composable(
+            route = "room_detail/{roomId}",
+            arguments = listOf(navArgument("roomId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            // RoomDetailScreen çağrısı kaldırıldı
+        }
+        */
+
+
 
         // Cihaz Kataloğu Rotası
         composable(DrawerItem.DeviceCatalog.route) {
-            // Yan menüden gelen tıklamalar bu ekranı gösterir.
             DeviceCatalogScreen(navController = navController)
         }
 
-        // Diğer Drawer Rotaları (Tanılama, Hakkında vb.)
-        composable(DrawerItem.Diagnostics.route) {
-            Text("Tanılama Ekranı") // Placeholder
-        }
-        composable(DrawerItem.About.route) {
-            Text("Hakkında Ekranı") // Placeholder
-        }
-        composable(DrawerItem.AppSettings.route) {
-            Text("Uygulama Ayarları Ekranı") // Placeholder
-        }
-
+        // Diğer Drawer Rotaları (Placeholder'lar)
+        composable(DrawerItem.Diagnostics.route) { Text("Tanılama Ekranı") }
+        composable(DrawerItem.About.route) { Text("Hakkında Ekranı") }
+        composable(DrawerItem.AppSettings.route) { Text("Uygulama Ayarları Ekranı") }
     }
 }

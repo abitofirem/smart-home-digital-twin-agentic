@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.ui.graphics)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.sceneform.base)
+    implementation(libs.androidx.foundation.layout)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -93,4 +94,7 @@ dependencies {
     // Coroutine desteği için (Asenkron veri akışı için kritik)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
+
+    // Coil - Resim Yükleme Kütüphanesi
+    implementation("io.coil-kt:coil-compose:2.6.0") // Güncel sürümü kontrol edin
 }

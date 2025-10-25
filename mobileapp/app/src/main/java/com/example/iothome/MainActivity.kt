@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.compose.rememberNavController
 import com.example.iothome.ui.MainScreen // <-- YENİ IMPORT
 import com.example.iothome.ui.theme.MobileappTheme
 
@@ -32,8 +33,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation() {
-    // Düzeltme: Tüm navigasyon mantığını ve Bottom Bar'ı içeren MainScreen'i çağır.
-    MainScreen()
+   MainScreen()
 }
-
 // ... Diğer Composable'lar ve Preview'lar ...

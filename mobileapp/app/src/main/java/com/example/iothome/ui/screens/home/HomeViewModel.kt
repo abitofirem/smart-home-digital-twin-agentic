@@ -1,8 +1,8 @@
 package com.example.iothome.ui.screens.home
 
 import androidx.lifecycle.viewModelScope
-import com.example.iothome.data.model.Light
-import com.example.iothome.data.mqtt.MqttRepository // Repository import
+import com.example.iothome.data.model.* // Yeni modelleri (Device, HomeUiState, WeatherState) import edin
+import com.example.iothome.data.mqtt.MqttRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,47 +11,87 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.flow.update
 
-// Context'e (uygulama context'i) ihtiyacımız olduğu için AndroidViewModel kullanıyoruz.
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-    // DI kullanılmadığı için Repository'i manuel oluşturuyoruz.
-    // Uygulama Context'ini Repository'e iletiyoruz.
     private val repository = MqttRepository(application)
 
-    // UI State
-    private val _lightState = MutableStateFlow(Light())
-    val lightState: StateFlow<Light> = _lightState.asStateFlow()
+    // YENİ UI STATE: Tüm Dashboard'u besler
+    private val _uiState = MutableStateFlow(HomeUiState(isLoading = true))
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    // Mock Cihaz Listesi (Görseldeki 3 cihazı içerir)
+    private fun getInitialDevices(): List<Device> {
+        return listOf(
+            // LIGHT: MQTT ile bağlı olan lamba
+            Device(id = "salon-ayakli-lamba-1", name = "Light", type = DeviceType.LIGHT, roomId = "lroom", isOn = false, isActuator = true),
+            // THERMOSTAT: Sadece gösterim ve toggle için mock
+            Device(id = "thermo-main", name = "Thermostat", type = DeviceType.THERMOSTAT, roomId = "lroom", isOn = true, intensity = 17.0, unit = "°C"),
+            // FAN: Sadece gösterim ve toggle için mock
+            Device(id = "fan-main", name = "Fan", type = DeviceType.FAN, roomId = "lroom", isOn = false, isActuator = true)
+        )
+    }
 
     init {
-        // 1. MQTT bağlantısını başlat ve güncel durumları dinle
+        // Mock Verileri Yükle
+        _uiState.update { currentState ->
+            currentState.copy(
+                quickAccessDevices = getInitialDevices(),
+                weather = WeatherState(), // Mock Hava Durumu
+                isLoading = false,
+                isMqttConnected = true // Varsayılan olarak başarılı bağlantı
+            )
+        }
+
         repository.startConnection()
 
-        // 2. Repository'den gelen lamba durumlarını (subscribe) dinle
+        // MQTT Dinleme Akışı (Sadece LIGHT cihazını günceller)
         viewModelScope.launch {
             repository.getLightStatusUpdates().collect { lightUpdate ->
-                // Unity'den gelen yeni durumu UI State'ine yaz
-                _lightState.value = lightUpdate
+                _uiState.update { currentState ->
+                    // Gelen lightUpdate'i quickAccessDevices listesinde bul ve durumunu değiştir
+                    val updatedDevices = currentState.quickAccessDevices.map { device ->
+                        if (device.id == lightUpdate.deviceId) {
+                            device.copy(isOn = lightUpdate.status) // Light modelindeki status, Device modelindeki isOn'a eşlendi
+                        } else {
+                            device
+                        }
+                    }
+                    currentState.copy(quickAccessDevices = updatedDevices)
+                }
             }
         }
     }
 
-    /**
-     * Lamba aç/kapa komutunu MQTT üzerinden Unity'ye gönderir (Publish).
-     */
-// HomeViewModel.kt dosyanızdaki toggleLight() metodu
-    fun toggleLight() {
-        val currentLight = _lightState.value
-        // newState değişkeni, mevcut durumun tam tersi olmalı!
-        val newState = !currentLight.isOn // True ise False, False ise True olmalı.
+    // YENİ GENEL TOGGLE FONKSİYONU
+    fun toggleDevice(deviceId: String) {
+        _uiState.update { currentState ->
+            val updatedDevices = currentState.quickAccessDevices.map { device ->
+                if (device.id == deviceId && device.isActuator) {
+                    val newState = !device.isOn
 
-        // 1. MQTT Komutunu gönder (Asıl iş)
-        viewModelScope.launch {
-            repository.sendLightCommand(currentLight.id, newState)
+                    // MQTT KOMUTU GÖNDERME (Sadece LIGHT cihazı için)
+                    if (device.type == DeviceType.LIGHT) {
+                        viewModelScope.launch {
+                            // Light ID'sini ve yeni durumu gönder
+                            repository.sendLightCommand(deviceId, newState)
+                        }
+                    }
+                    // Diğer cihazlar (Fan, Termostat) şimdilik sadece yerelde güncellenecek
+
+                    // UI'ı yerelde güncelleme
+                    device.copy(isOn = newState)
+                } else {
+                    device
+                }
+            }
+            currentState.copy(quickAccessDevices = updatedDevices)
         }
-
-        // 2. UI'ı YERELDE hemen güncelle (Kullanıcı Deneyimi için)
-        _lightState.update { currentLight.copy(isOn = newState) }
     }
 
-
+    // Eski toggleLight fonksiyonu kaldırıldı.
+    // addRoom fonksiyonu şimdilik aynı kalır.
+    fun addRoom(roomName: String, devices: List<Device>) {
+        println("MVVM Aksiyonu: Yeni Oda Kaydediliyor -> $roomName")
+        // Gerçek implementasyon buraya gelecek
+    }
 }
