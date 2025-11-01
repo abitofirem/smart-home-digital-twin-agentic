@@ -39,7 +39,7 @@ fun AppBottomNavHost(
             RoomsScreen(bottomNavController = navController, paddingValues = paddingValues)
         }
         composable(BottomNavItem.Routines.route) {
-      //      AgentScreen(bottomNavController = navController, paddingValues = paddingValues)
+            AgentScreen(bottomNavController = navController, paddingValues = paddingValues)
         }
         composable(BottomNavItem.Settings.route) {
       //      SettingsScreen(bottomNavController = navController, paddingValues = paddingValues)

@@ -77,13 +77,12 @@ fun CircularGauge(
             val secondaryStartAngle = startAngle + sweepAngle
             val secondarySweepAngle = 360f - sweepAngle // Kalan kısım
 
-            // Sadece görseldeki gibi kırmızı ve mavi bölüm için:
-            // Bu kısım tam olarak görseldeki gibi iki ayrı bölümü çizmez,
-            // sadece değeri gösterir. İki ayrı bölüm için daha karmaşık çizim gerekir.
+            // DÜZELTME 2: Değeri (value) KIRMIZI ile çiziyoruz
+            // Not: İki rengin üst üste binmemesi için bu bloğu Sona aldık (Z-sırası)
             drawArc(
-                color = secondaryColor, // Şimdilik sadece değeri göstermek için mavi kullanıyoruz
-                startAngle = secondaryStartAngle,
-                sweepAngle = secondarySweepAngle, // Kalan kısım
+                color = secondaryColor, // KIRMIZI (GraphHot)
+                startAngle = startAngle,
+                sweepAngle = sweepAngle, // Değere göre ilerleme
                 useCenter = false,
                 topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
                 size = Size(arcSize, arcSize),
@@ -91,18 +90,20 @@ fun CircularGauge(
             )
         }
 
+
         // Ortadaki Metinler
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "$subtitle",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
+
             Text(
                 text = "${value.toInt()}°C", // Değeri göster
                 style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 48.sp // Büyük font boyutu
+            )
+            Text(
+                text = "$subtitle",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
         }
     }

@@ -2,12 +2,12 @@ package com.example.iothome.data
 
 object MqttConstants {
     // Broker Ayarları
-    const val BROKER_HOST = "69935d3a217e4cdb94eef5662762a511.s1.eu.hivemq.cloud"
-    const val BROKER_PORT = 8883 // Güvenli SSL Portu
+    const val BROKER_HOST = ""
+    const val BROKER_PORT = ""
 
     // Kullanıcı Bilgileri
-    const val USERNAME = "mtnkdr"
-    const val PASSWORD = "3N772AHL0qSRp8"
+    const val USERNAME = ""
+    const val PASSWORD = ""
 
     // Konular (Topics)
     const val CLIENT_ID = "AndroidAppClient" // Her cihaz için benzersiz olmalı

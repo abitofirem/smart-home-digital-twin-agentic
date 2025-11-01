@@ -36,7 +36,7 @@ fun MainScreen() {
             when (currentRoute) {
                 BottomNavItem.Home.route -> "Merhaba KullaniciAdi!" // Home ekranı başlığı
                 BottomNavItem.Rooms.route -> "Tüm Odalar" // Rooms ekranı başlığı
-                BottomNavItem.Routines.route -> "Agent AI & Rutinler"
+                BottomNavItem.Routines.route -> ""
                 BottomNavItem.Settings.route -> "Ayarlar"
                 // Diğer ekranlar (NewRoom, Catalog) için de başlık eklenebilir
               "new_room_route" -> "Yeni Oda Ekle"
