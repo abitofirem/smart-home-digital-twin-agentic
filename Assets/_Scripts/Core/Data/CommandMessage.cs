@@ -4,8 +4,7 @@ namespace SmartHome.Core.Data
 {
     /*
      * COMMAND MESSAGE (GELEN KOMUT PAKETİ) - FİNAL VERSİYON
-     * * Backend'in (client.py) gönderdiği JSON formatı ile tam uyumludur.
-     * * Örnek JSON: {"deviceId":"salon-lamba-1", "command":"on", "payload":""}
+        {"deviceId":"cihaz_id", "command":"", "payload":""}
      */
     [Serializable]
     public class CommandMessage
