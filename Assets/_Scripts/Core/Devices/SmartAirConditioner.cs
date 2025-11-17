@@ -7,15 +7,15 @@ using SmartHome.Core.Data;    // TelemetryMessage için
 namespace SmartHome.Devices
 {
     /*
-     * AKILLI KLİMA KONTROLCÜSÜ
+     * AKILLI KLİMA KONTROLCÜSÜ (HİBRİT VERSİYON)
      * * ISmartDevice arayüzünü uygular.
-     * * DeviceManager tarafından yönetilir.
-     * * "on", "off", "set_temp", "set_mode" (cool/heat) komutlarını alır.
-     * * O anki çalışma durumuna göre bir ısıtma/soğutma etkisi sağlar.
+     * * "on", "off", "set_temp" VE "set_mode" komutlarını tanır.
+     * * "set_temp" veya "set_mode" komutu geldiğinde otomatik olarak açılır.
+     * * Isıtma/Soğutma kararını manuel olarak ayarlanan 'mode' üzerinden verir.
      */
     public class SmartAirConditioner : MonoBehaviour, ISmartDevice //
     {
-        // Enum: Klimanın çalışabileceği modlar
+        // Klimanın kullanıcı tarafından ayarlanan modları
         public enum ACMode { Off, Cool, Heat }
 
         [Header("Kimlik (Zorunlu!)")]
@@ -24,9 +24,9 @@ namespace SmartHome.Devices
 
         [Header("Klima Ayarları")]
         [Tooltip("Klimanın ısıtma/soğutma gücü. İç sıcaklık değişimini etkiler.")]
-        [SerializeField] private float powerFactor = 1.0f; // Ne kadar güçlü ısıtıp soğuttuğu
+        [SerializeField] private float powerFactor = 1.0f;
         [Tooltip("Hedef sıcaklığa ulaşıldığında çalışmayı durdurmak için tolerans payı (°C).")]
-        [SerializeField] private float temperatureThreshold = 0.5f; // Hedefin +/- 0.5 derece yakınına gelince dursun
+        [SerializeField] private float temperatureThreshold = 0.5f;
 
         // ISmartDevice arayüzünden gelen özellikler
         public string DeviceId => deviceId;
@@ -38,10 +38,11 @@ namespace SmartHome.Devices
         private ACMode _currentMode = ACMode.Cool; // Varsayılan mod: Soğutma
         private float _targetTemperature = 22.0f; // Varsayılan hedef sıcaklık
 
-        // Dışarıdan okunabilir özellikler
+        // Dışarıdan okunabilir özellikler (Debugging için)
         public bool IsOn => _isOn;
         public ACMode CurrentMode => _currentMode;
         public float TargetTemperature => _targetTemperature;
+
 
         /// <summary>
         /// Klimanın o anki ısıtma/soğutma etkisini döndürür.
@@ -50,14 +51,17 @@ namespace SmartHome.Devices
         /// <returns>Pozitif: Isıtıyor, Negatif: Soğutuyor, 0: Kapalı veya hedefte.</returns>
         public float GetCurrentHeatingCoolingEffect(float currentRoomTemperature)
         {
-            if (!_isOn) return 0f; // Klima kapalıysa etki yok
+            if (!_isOn || _currentMode == ACMode.Off) 
+            {
+                return 0f; // Klima kapalıysa veya modu 'Off' ise etki yok
+            }
 
             float effect = 0f;
             float tempDifference = currentRoomTemperature - _targetTemperature;
 
             if (_currentMode == ACMode.Cool)
             {
-                // Oda hedef sıcaklıktan DAHA SICAKSA ve fark toleransın DIŞINDAYSA soğut
+                // Oda hedef sıcaklıktan DAHA SICAKSA (ve tolerans dışındaysa) soğut
                 if (tempDifference > temperatureThreshold)
                 {
                     effect = -powerFactor; // Soğutma etkisi (negatif)
@@ -65,16 +69,15 @@ namespace SmartHome.Devices
             }
             else if (_currentMode == ACMode.Heat)
             {
-                // Oda hedef sıcaklıktan DAHA SOĞUKSA ve fark toleransın DIŞINDAYSA ısıt
+                // Oda hedef sıcaklıktan DAHA SOĞUKSA (ve tolerans dışındaysa) ısıt
                 if (tempDifference < -temperatureThreshold)
                 {
                     effect = powerFactor; // Isıtma etkisi (pozitif)
                 }
             }
-            // Debug.Log($"[SmartAC] ({DeviceId}) Effect: {effect} (Current: {currentRoomTemperature:F1}, Target: {_targetTemperature:F1}, Mode: {_currentMode})");
+            
             return effect;
         }
-
 
         /// <summary>
         /// ISmartDevice arayüzünden gelen başlatma metodu.
@@ -82,13 +85,13 @@ namespace SmartHome.Devices
         public void Initialize(DeviceManager manager)
         {
             this.Manager = manager;
-            // Başlangıç durumunu telemetri olarak gönderelim
-            PublishAllStatusTelemetry();
+            PublishAllStatusTelemetry(); // Başlangıç durumunu yayınla
             Debug.Log($"[SmartAirConditioner] Cihaz başlatıldı: {DeviceId}");
         }
 
         /// <summary>
         /// ISmartDevice arayüzünden gelen komut işleme metodu.
+        /// "set_mode" komutu GERİ EKLENDİ.
         /// </summary>
         public void ReceiveCommand(string command, string payload)
         {
@@ -100,39 +103,36 @@ namespace SmartHome.Devices
                     if (!_isOn) { _isOn = true; statusChanged = true; }
                     break;
                 case "off":
-                    if (_isOn) { _isOn = false; statusChanged = true; }
+                    if (!_isOn) { _isOn = false; statusChanged = true; }
                     break;
-                case "set_state": // Hem on/off hem de modu ayarlayabilir (örn: payload="cool")
-                    string targetState = payload.ToLower();
-                    if (targetState == "on") { if (!_isOn) { _isOn = true; statusChanged = true; } }
-                    else if (targetState == "off") { if (_isOn) { _isOn = false; statusChanged = true; } }
-                    else if (Enum.TryParse<ACMode>(targetState, true, out ACMode newMode)) // Modu ayarla (cool/heat)
+                
+                // --- "set_mode" KOMUTU GERİ EKLENDİ ---
+                case "set_mode":
+                    ACMode newMode;
+                    // Gelen payload'u (örn: "HEAT") ACMode enum'una çevirmeye çalış
+                    if (Enum.TryParse<ACMode>(payload, true, out newMode)) 
                     {
                          if (_currentMode != newMode) { _currentMode = newMode; statusChanged = true;}
-                         if (!_isOn) { _isOn = true; statusChanged = true;} // Mod değişirse açılsın
+                         // Eğer ayarlanan mod "Off" değilse, klimayı da otomatik olarak AÇ
+                         if (newMode != ACMode.Off && !_isOn) { _isOn = true; statusChanged = true; }
                     }
-                    else { Debug.LogWarning($"[SmartAC] ({DeviceId}) Bilinmeyen set_state payload'u: {payload}"); }
+                    else { Debug.LogWarning($"[SmartAC] ({DeviceId}) Bilinmeyen set_mode payload'u: {payload}"); }
                     break;
-                case "set_mode": // Sadece modu ayarla (cool/heat)
-                    if (Enum.TryParse<ACMode>(payload, true, out ACMode modeToSet))
-                    {
-                         if (_currentMode != modeToSet) { _currentMode = modeToSet; statusChanged = true;}
-                         if (!_isOn) { _isOn = true; statusChanged = true;} // Mod değişirse açılsın
-                    }
-                     else { Debug.LogWarning($"[SmartAC] ({DeviceId}) Bilinmeyen set_mode payload'u: {payload}"); }
-                    break;
+
                 case "set_temp":
                 case "set_temperature":
                     if (float.TryParse(payload, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp))
                     {
-                        if (Mathf.Abs(_targetTemperature - newTemp) > 0.01f) // Küçük farkları önemseme
+                        if (Mathf.Abs(_targetTemperature - newTemp) > 0.01f)
                         {
                              _targetTemperature = newTemp;
                              statusChanged = true;
+                             _isOn = true; // --- OTOMATİK AÇMA --- Sıcaklık ayarı gelince klimayı aç
                         }
                     }
                      else { Debug.LogWarning($"[SmartAC] ({DeviceId}) Geçersiz set_temp payload'u: {payload}"); }
                     break;
+
                 default:
                     Debug.LogWarning($"[SmartAirConditioner] ({DeviceId}) Bilinmeyen komut alındı: {command}");
                     break;
@@ -147,12 +147,13 @@ namespace SmartHome.Devices
         }
 
         /// <summary>
-        /// Klimanın mevcut durumunu (On/Off, Mod, Hedef Sıcaklık) telemetri olarak yayınlar.
+        /// Klimanın ana durum bilgilerini telemetri olarak yayınlar.
         /// </summary>
         private void PublishAllStatusTelemetry()
         {
+            if (Manager == null) return; // Henüz başlatılmadıysa gönderme
             PublishTelemetry("isOn", _isOn.ToString().ToLower());
-            PublishTelemetry("mode", _currentMode.ToString().ToLower());
+            PublishTelemetry("mode", _currentMode.ToString().ToLower()); // Artık "workingMode" değil, kullanıcının ayarladığı "mode"
             PublishTelemetry("targetTemperature", _targetTemperature.ToString("F1"));
         }
 
@@ -161,9 +162,10 @@ namespace SmartHome.Devices
         /// </summary>
         private void PublishTelemetry(string dataType, string value)
         {
+            if (Manager == null) return; 
             long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             TelemetryMessage msg = new TelemetryMessage(DeviceId, dataType, value, timestamp);
-            OnTelemetryDataPublished?.Invoke(msg); //
+            OnTelemetryDataPublished?.Invoke(msg);
         }
         
         /// <summary>

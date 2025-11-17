@@ -3,25 +3,27 @@ using System;
 namespace SmartHome.Core.Data
 {
     /*
-     * COMMAND MESSAGE (GELEN KOMUT PAKETİ) - newStatus FORMATI
-     * * Arkadaşının gönderdiği JSON formatına ('deviceId', 'newStatus') uygun hale getirildi.
-     * * Örnek JSON: {"deviceId":"salon-ayakli-lamba-1", "name":"...", "newStatus":"ON"}
+     * COMMAND MESSAGE (GELEN KOMUT PAKETİ) - FİNAL VERSİYON
+     * * Backend'in (client.py) gönderdiği JSON formatı ile tam uyumludur.
+     * * Örnek JSON: {"deviceId":"salon-lamba-1", "command":"on", "payload":""}
      */
     [Serializable]
     public class CommandMessage
     {
         /// <summary>
         /// Komutun hedeflendiği cihazın benzersiz kimliği.
+        /// Bu alan, gelen JSON mesajında ZORUNLUDUR.
         /// </summary>
         public string deviceId;
 
         /// <summary>
-        /// Cihazın yeni durumu (örn: "ON", "OFF").
-        /// Arkadaşının gönderdiği JSON'daki alan adıyla eşleşmeli.
+        /// Yapılacak işlemin adı (örn: "on", "off", "set_temp").
         /// </summary>
-        public string newStatus; // 'status' yerine 'newStatus' kullanıyoruz
+        public string command;
 
-        // Opsiyonel: JSON'da 'name' gibi başka alanlar varsa ama kullanmayacaksak
-        // buraya eklememize gerek yok, Newtonsoft.Json bunları görmezden gelir.
+        /// <summary>
+        /// Komutla birlikte gönderilen ek veri (isteğe bağlı).
+        /// </summary>
+        public string payload;
     }
 }

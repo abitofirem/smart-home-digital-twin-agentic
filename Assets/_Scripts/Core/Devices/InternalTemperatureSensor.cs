@@ -8,27 +8,30 @@ namespace SmartHome.Devices
 {
     /*
      * İÇ MEKAN SICAKLIK SENSÖRÜ - GÜNCELLENMİŞ VERSİYON
-     * * Artık aynı odadaki SmartAirConditioner'ın etkisini hesaba katıyor.
+     * * Dış sıcaklık etkisi azaltıldı (yalıtım artırıldı).
+     * * Başlangıç sıcaklığı 24 dereceye sabitlendi.
      */
-    public class InternalTemperatureSensor : MonoBehaviour, ISmartDevice //
+    public class InternalTemperatureSensor : MonoBehaviour, ISmartDevice 
     {
         [Header("Kimlik (Zorunlu!)")]
         [Tooltip("Bu sensörün benzersiz kimliği (örn: 'salon-sicaklik-sensoru').")]
         [SerializeField] private string deviceId = "oda-sicaklik-sensoru";
 
-        // --- YENİ BÖLÜM: KLİMA BAĞLANTISI ---
         [Header("Bağlı Klima (Opsiyonel)")]
         [Tooltip("Bu sensörün bulunduğu odadaki klima cihazı. Inspector'dan atanmalı.")]
         [SerializeField] private SmartAirConditioner linkedAirConditioner; 
-        // --- YENİ BÖLÜM BİTİŞİ ---
 
         [Header("Oda Ayarları")]
-        [Tooltip("Odanın hedeflenen sıcaklığı (°C). Şimdilik sabit, klima bunu dolaylı yoldan etkiler.")]
-        [SerializeField] private float targetTemperature = 22.0f; // Bu artık klimanın hedefiyle karışmamalı, belki kaldırılabilir? Şimdilik kalsın.
-        [Tooltip("Odanın yalıtım faktörü (0.0 = Pencere açık, 1.0 = Mükemmel yalıtım).")]
-        [SerializeField] [Range(0.0f, 1.0f)] private float insulationFactor = 0.8f; 
+        [Tooltip("Odanın hedeflenen sıcaklığı (°C). Bu, klimanın hedefidir.")]
+        [SerializeField] private float targetTemperature = 22.0f; // Bu, klimanın varsayılan hedefi olmaya devam edebilir
+        
+        // --- DEĞİŞİKLİK 1: YALITIM ARTIRILDI ---
+        [Tooltip("Odanın yalıtım faktörü (0.0 = Etki çok, 1.0 = Etki yok).")]
+        [SerializeField] [Range(0.0f, 1.0f)] private float insulationFactor = 0.95f; // 0.8'den 0.98'e yükseltildi (Dışarısı çok az etkilesin)
+        
+        // --- DEĞİŞİKLİK 2: DEĞİŞİM YAVAŞLATILDI ---
         [Tooltip("İç sıcaklığın dış sıcaklığa ve klima etkisine ne kadar hızlı tepki verdiği.")]
-        [SerializeField] private float temperatureChangeRate = 0.005f; 
+        [SerializeField] private float temperatureChangeRate = 0.001f; // 0.005'ten 0.001'e düşürüldü (Çok yavaş etkilensin)
 
         [Header("Yayınlama Ayarları")]
         [Tooltip("Sıcaklık verisinin ne sıklıkla okunup yayınlanacağı (saniye cinsinden).")]
@@ -45,14 +48,9 @@ namespace SmartHome.Devices
         public void Initialize(DeviceManager manager)
         {
             this.Manager = manager;
-            // Başlangıç sıcaklığını dış sıcaklığa göre daha gerçekçi ayarlayalım
-             SimulationManager simManager = SimulationManager.Instance;
-             if (simManager != null) {
-                 // Dış sıcaklık ile hedef sıcaklık arasında, yalıtıma göre bir başlangıç noktası
-                 _currentInternalTemperature = Mathf.Lerp(simManager.CurrentExternalTemperature, targetTemperature, insulationFactor);
-             } else {
-                 _currentInternalTemperature = targetTemperature; // SimulationManager yoksa hedefle başla
-             }
+            
+            // --- DEĞİŞİKLİK 3: BAŞLANGIÇ SICAKLIĞI 24 DERECEYE SABİTLENDİ ---
+            _currentInternalTemperature = 24.0f; // Başlangıç sıcaklığı 24 derece olarak ayarlandı.
             
             _timeSinceLastPublish = publishInterval; 
             _isInitialized = true;
@@ -63,7 +61,7 @@ namespace SmartHome.Devices
 
         public void ReceiveCommand(string command, string payload)
         {
-            // Bu sensör doğrudan komut almaz (belki kalibrasyon vb. eklenebilir)
+             // Bu sensör doğrudan komut almaz
              Debug.Log($"[InternalTemperatureSensor] ({DeviceId}) Komut alındı (yoksayıldı): {command}");
         }
 
@@ -90,29 +88,22 @@ namespace SmartHome.Devices
             float externalTemp = simManager.CurrentExternalTemperature;
 
             // 1. Dış sıcaklığın doğal etkisi (yalıtıma bağlı)
+            // (1.0f - 0.98f) = 0.02f -> Dış sıcaklık artık 50 kat daha az etkili.
             float externalInfluence = (externalTemp - _currentInternalTemperature) * (1.0f - insulationFactor);
 
-            // --- YENİ BÖLÜM: KLİMA ETKİSİ ---
+            // 2. Klima etkisi
             float acEffect = 0f;
-            // Eğer bir klima bağlıysa VE klima başlatıldıysa (Manager'ı varsa yani DeviceManager onu bulduysa)
             if (linkedAirConditioner != null && linkedAirConditioner.Manager != null) 
             {
-                // Klimanın o anki ısıtma/soğutma etkisini al
                 acEffect = linkedAirConditioner.GetCurrentHeatingCoolingEffect(_currentInternalTemperature);
             }
-            // --- YENİ BÖLÜM BİTİŞİ ---
 
             // Toplam sıcaklık değişimi = (Dış Etki + Klima Etkisi) * Değişim Hızı * Zaman Farkı
-            // Klima etkisini daha belirgin yapmak için onu changeRate ile çarpmayabiliriz veya ayrı bir çarpan kullanabiliriz.
-            // Şimdilik ikisini de aynı oranda etkilesin.
-            float deltaTemperature = (externalInfluence + acEffect) * temperatureChangeRate * Time.deltaTime * 100f; // Etkiyi artırmak için çarpan ekledim (ayarlanabilir)
+            // temperatureChangeRate'i de 0.001'e düşürdük, bu yüzden değişim ÇOK yavaş olacak.
+            float deltaTemperature = (externalInfluence + acEffect) * temperatureChangeRate * Time.deltaTime * 100f; 
 
             _currentInternalTemperature += deltaTemperature;
-
-            // Sıcaklığın mantıksız değerlere gitmesini engelle (opsiyonel)
-            // _currentInternalTemperature = Mathf.Clamp(_currentInternalTemperature, -10f, 50f); 
         }
-
 
         /// <summary>
         /// O anki iç sıcaklık verisini TelemetryMessage olarak yayınlar.

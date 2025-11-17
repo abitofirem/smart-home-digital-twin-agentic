@@ -167,13 +167,13 @@ namespace SmartHome.Core
 
         /// <summary>
         /// IMessageProvider'dan bir mesaj geldiğinde bu fonksiyon tetiklenir.
-        /// YENİ JSON FORMATINI ('deviceId', 'newStatus') işler.
+        /// FİNAL VERSİYON: Backend'den gelen {"deviceId":"...", "command":"..."} formatını işler.
         /// </summary>
         private void HandleInboundMessage(InboundMessage message) //
         {
             try
             {
-                // 1. Gelen ham JSON içeriğini YENİ CommandMessage sınıfımıza parse et.
+                // 1. Gelen ham JSON içeriğini CommandMessage sınıfımıza parse et.
                 CommandMessage cmd = JsonConvert.DeserializeObject<CommandMessage>(message.Payload);
 
                 // 2. JSON parse edildi mi ve GEREKLİ alanlar dolu mu kontrol et.
@@ -187,39 +187,18 @@ namespace SmartHome.Core
                     Debug.LogWarning($"[DeviceManager] Gelen komut JSON'unda 'deviceId' alanı eksik veya boş! Mesaj yoksayıldı: {message.Payload}");
                     return;
                 }
-                // --- DEĞİŞİKLİK BURADA ---
-                if (string.IsNullOrEmpty(cmd.newStatus)) // 'status' yerine 'newStatus' kontrolü
+                if (string.IsNullOrEmpty(cmd.command))
                 {
-                    Debug.LogWarning($"[DeviceManager] '{cmd.deviceId}' için gelen komut JSON'unda 'newStatus' alanı eksik veya boş! Mesaj yoksayıldı: {message.Payload}");
+                    Debug.LogWarning($"[DeviceManager] '{cmd.deviceId}' için gelen komut JSON'unda 'command' alanı eksik veya boş! Mesaj yoksayıldı: {message.Payload}");
                     return;
                 }
 
                 // 3. JSON'dan okuduğumuz 'cmd.deviceId' ile kayıt defterimizde cihaz ara.
                 if (_deviceRegistry.TryGetValue(cmd.deviceId, out ISmartDevice targetDevice))
                 {
-                    // Cihaz bulundu. Şimdi 'newStatus' alanını bizim standart komutlarımıza çevirelim.
-                    string commandToSend = "";
-                    string payloadToSend = ""; // Şimdilik payload boş
-
-                    // Gelen newStatus'u küçük harfe çevirerek kontrol et
-                    // --- DEĞİŞİKLİK BURADA ---
-                    switch (cmd.newStatus.ToLower()) // cmd.status yerine cmd.newStatus
-                    {
-                        case "on":
-                            commandToSend = "on";
-                            break;
-                        case "off":
-                            commandToSend = "off";
-                            break;
-                        // Gelecekte başka durumlar ekleyebilirsin
-                        default:
-                            Debug.LogWarning($"[DeviceManager] '{cmd.deviceId}' için bilinmeyen durum (newStatus) alındı: '{cmd.newStatus}'. Komut yoksayıldı.");
-                            return; // Bilinmeyen status ise cihaza gönderme
-                    }
-
-                    // Her şey yolunda, çevirdiğimiz komutu cihaza iletiyoruz.
-                    Debug.Log($"[DeviceManager] Komut '{cmd.deviceId}' cihazına iletiliyor: Command='{commandToSend}', Payload='{payloadToSend}' (Orijinal newStatus='{cmd.newStatus}')");
-                    targetDevice.ReceiveCommand(commandToSend, payloadToSend); //
+                    // Cihaz bulundu. Komutu doğrudan (çeviri yapmadan) cihaza ilet.
+                    Debug.Log($"[DeviceManager] Komut '{cmd.deviceId}' cihazına iletiliyor: Command='{cmd.command}', Payload='{cmd.payload}'");
+                    targetDevice.ReceiveCommand(cmd.command, cmd.payload); //
                 }
                 else
                 {

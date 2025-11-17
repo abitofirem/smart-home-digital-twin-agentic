@@ -123,6 +123,7 @@ namespace SmartHome.Core.IoT
 
         /// <summary>
         /// Gelen mesaj kuyruğunu Unity'nin ana thread'inde (Update fonksiyonu) işler.
+        /// FİNAL VERSİYON: DeviceId çıkarma mantığı kaldırıldı.
         /// </summary>
         private void Update()
         {
@@ -143,22 +144,9 @@ namespace SmartHome.Core.IoT
 
                     Debug.Log($"[MqttnetProvider] Mesaj alındı - Topic: {topic} | Payload: {payload}");
 
-                    // Gelen mesaj için InboundMessage paketi oluştur
+                    // Gelen mesaj için InboundMessage paketi oluştur.
+                    // DeviceId'yi artık burada AYIKLAMIYORUZ. DeviceManager JSON'dan alacak.
                     InboundMessage inboundMsg = new InboundMessage(topic, payload);
-
-                    // --- CİHAZ ID'SİNİ TOPIC'TEN ÇIKARMA MANTIĞI ---
-                    // Örnek Topic: "home/devices/salon-lamba-1/set"
-                    string[] topicParts = topic.Split('/');
-                    if (topicParts.Length >= 3 && topicParts[0] == "home" && topicParts[1] == "devices")
-                    {
-                        inboundMsg.DeviceId = topicParts[2]; // "salon-lamba-1"
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[MqttnetProvider] Mesajın Topic'inden ({topic}) DeviceId çıkarılamadı.");
-                        // ID çıkarılamazsa mesajı DeviceManager'a yine de gönderelim,
-                        // belki JSON içinde ID vardır veya DeviceManager farklı bir mantık kullanır.
-                    }
                     
                     // Mesajı DeviceManager'a iletmek için olayı (event) tetikle
                     OnMessageReceived?.Invoke(inboundMsg);
