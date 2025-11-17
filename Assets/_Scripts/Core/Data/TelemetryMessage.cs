@@ -1,6 +1,5 @@
-using System; // Serializable özelliği ve timestamp için gerekli olabilir
+using System;
 
-// Veri yapılarımızı düzenli tutmak için bu namespace'i kullanıyoruz.
 namespace SmartHome.Core.Data
 {
     /*
